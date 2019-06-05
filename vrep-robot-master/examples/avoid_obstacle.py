@@ -7,7 +7,6 @@ sys.path.insert(0, '../src')
 from robot import Robot
 import matplotlib.pyplot as plt
 
-
 class avoid_obstacles():
     def __init__(self):
         self.NUM_SENSORS = 8
@@ -68,29 +67,27 @@ class avoid_obstacles():
 robot = Robot()
 Avoid = avoid_obstacles()
 Avoid.init_fuzzy()
-data_position = []
+data_position_x = []
+data_position_y = []
+how_long = int(input())
 t_start = time.time()
 
 while(robot.get_connection_status() != -1):
     dist = robot.read_ultrassonic_sensors()
     vel = Avoid.get_vel(dist[:8])  # Using only the 8 frontal sensors
     position = robot.get_current_position()
-    data_position.append(position)
+    data_position_x.append(position[0])
+    data_position_y.append(position[1])    
     robot.set_left_velocity(vel[0])
     robot.set_right_velocity(vel[1])
     t_end = time.time()
-    if (t_end - t_start) >= 10:
+    if (t_end - t_start) >= how_long:
         break
 
 
 t = t_end - t_start 
 print(t)
-#ax = plt.axes(projection='3d')
-# Data for a three-dimensional line
-#zline = np.linspace(0, 15, 1000)
-#xline = np.sin(zline)
-#yline = np.cos(zline)
-#ax.plot3D(data_position[0],data_position[1],data_position[2], 'red')
-#ax.show()
-
-#sys.exit()
+plt.plot(data_position_x, data_position_y, linewidth=2.0)  
+plt.ylabel('Y Position')
+plt.xlabel('X Position')
+plt.show()
