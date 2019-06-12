@@ -52,13 +52,11 @@ class avoid_obstacles():
 robot = Robot()
 a = avoid_obstacles()
 a.init_fuzzy()
-ultrassonic = robot.read_ultrassonic_sensors()[0:8]
-print("Ultrassonic: ", ultrassonic)
-print("vel: ", a.get_vel(ultrassonic))
 
 for x in range(350):
     ultrassonic = robot.read_ultrassonic_sensors()[0:8]
     vel = a.get_vel(ultrassonic)
+    print("Ultrassonic: ", ultrassonic)
     print("vel: ", vel)
     robot.set_left_velocity(vel[0])  # rad/s
     robot.set_right_velocity(vel[1])
