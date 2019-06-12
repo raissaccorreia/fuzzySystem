@@ -87,7 +87,7 @@ class wall_following():
 
         vel_ctrl = ctrl.ControlSystem(rule_Wall)
         self.fuzzy_system = ctrl.ControlSystemSimulation(vel_ctrl)
-        print(" System Init")
+        #print(" System Init")
 
     def get_vel(self, dist):
         for i in range(len(dist)):
@@ -108,8 +108,8 @@ robot = Robot()
 a = wall_following()
 a.init_fuzzy()
 ultrassonic = robot.read_ultrassonic_sensors()[0:8]
-print("Ultrassonic: ", ultrassonic)
-print("vel: ", a.get_vel(ultrassonic))
+#print("Ultrassonic: ", ultrassonic)
+#print("vel: ", a.get_vel(ultrassonic))
 oldPos = 0
 
 for x in range(5000):
@@ -122,11 +122,11 @@ for x in range(5000):
     else:
         vel = a.get_vel(ultrassonic)
         #print("Ultrassonic: ", ultrassonic)
-        print("Iteracao: ", x)
-        print("Esquerda: " , ultrassonic[0:3])
-        print("Frente: " , ultrassonic[3:5])
-        print("Direita: " , ultrassonic[5:8])
-        print("vel: ", a.get_vel(ultrassonic))
+        #print("Iteracao: ", x)
+        #print("Esquerda: " , ultrassonic[0:3])
+        #print("Frente: " , ultrassonic[3:5])
+        #print("Direita: " , ultrassonic[5:8])
+        #print("vel: ", a.get_vel(ultrassonic))
         robot.set_left_velocity(vel[0])  # rad/s
         robot.set_right_velocity(vel[1])
         time.sleep(0.2)
