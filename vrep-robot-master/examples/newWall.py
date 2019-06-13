@@ -11,7 +11,7 @@ from robot import Robot
 
 class wall_following():
     def __init__(self):
-        self.NUM_SENSORS = 8
+        self.NUM_SENSORS = 9
         self.max_speed = math.pi
         self.fast_speed = 2 * self.max_speed
         self.steps = 0.01
@@ -34,15 +34,15 @@ class wall_following():
         v_right['foward']       = fuzz.trimf(v_left.universe, [0.0, self.max_speed, self.max_speed])
         v_right['slowTurning']  = fuzz.trimf(v_left.universe, [0.0, self.max_speed - 0.1, self.max_speed - 0.1])
         v_right['turning']      = fuzz.trimf(v_left.universe, [0.0, self.max_speed - 0.5, self.max_speed - 0.5])
-        v_right['reverse']      = fuzz.trimf(v_left.universe, [-self.max_speed, -self.max_speed, 0.0])
-        #v_right['lostWall']
+        v_right['reverse']      = fuzz.trimf(v_right.universe, [-self.max_speed + 0.1, -self.max_speed + 0.1, 0.0])
+        v_right['lostWall']     = fuzz.trimf(v_left.universe, [-self.max_speed - 0.2, -self.max_speed - 0.2 , 0.0])
 
         v_left['fast']          = fuzz.trimf(v_right.universe, [0.3, self.max_speed + 0.3, self.max_speed + 0.3])
         v_left['foward']        = fuzz.trimf(v_right.universe, [0.0, self.max_speed, self.max_speed])
         v_left['slowTurning']   = fuzz.trimf(v_right.universe, [0.0, self.max_speed - 0.1, self.max_speed - 0.1])
         v_left['turning']       = fuzz.trimf(v_right.universe, [0.0, self.max_speed - 0.5, self.max_speed - 0.5])
         v_left['reverse']       = fuzz.trimf(v_right.universe, [-self.max_speed + 0.1, -self.max_speed + 0.1, 0.0])
-        #v_left['lostWall']
+        v_left['lostWall']      = fuzz.trimf(v_right.universe, [0.3, self.max_speed + 0.3, self.max_speed + 0.3])
 
         rule_Wall = []
         #PROCURAR PAREDE
@@ -60,8 +60,8 @@ class wall_following():
 
         #SEGUIR PAREDE
         #DIREITA
-        rule_Wall.append(ctrl.Rule(distance[7]['ideal'] , v_right['foward']))
-        rule_Wall.append(ctrl.Rule(distance[7]['close'] , v_right['fast']))
+        rule_Wall.append(ctrl.Rule(distance[7]['ideal'] , v_right['slowTurning']))
+        rule_Wall.append(ctrl.Rule(distance[7]['close'] , v_right['foward']))
 
         #ESQUERDA
         rule_Wall.append(ctrl.Rule(distance[7]['ideal'] , v_left['foward']))
@@ -75,14 +75,20 @@ class wall_following():
         rule_Wall.append(ctrl.Rule(distance[3]['close'] | distance[4]['close'] & (distance[7]['ideal'] | distance[7]['close']) , v_left['reverse']))
 
         #PERDEU PAREDE
-        rule_Wall.append(ctrl.Rule(distance[7]['ideal'] | distance[7]['close'] | distance[7]['danger'] & (distance[5]['away'] | distance[5]['nothing']), v_right['turning']))
-        rule_Wall.append(ctrl.Rule(distance[7]['ideal'] | distance[7]['close'] | distance[7]['danger'] & (distance[5]['away'] | distance[5]['nothing']), v_left['fast']))
+        #rule_Wall.append(ctrl.Rule(distance[7]['ideal'] | distance[7]['close'] | distance[7]['danger'] & (distance[6]['ideal'] | distance[6]['away'] | distance[6]['nothing']), v_right['turning']))
+        #rule_Wall.append(ctrl.Rule(distance[7]['ideal'] | distance[7]['close'] | distance[7]['danger'] & (distance[6]['away'] | distance[6]['nothing']), v_left['fast']))
         
+        rule_Wall.append(ctrl.Rule((distance[7]['nothing'] | distance[7]['away']) & (distance[8]['close'] | distance[8]['ideal'] | distance[8]['away']), v_right['lostWall']))
+        rule_Wall.append(ctrl.Rule((distance[7]['nothing'] | distance[7]['away']) & (distance[8]['close'] | distance[8]['ideal'] | distance[8]['away']), v_left['lostWall']))
+
+        rule_Wall.append(ctrl.Rule((distance[7]['ideal'] | distance[7]['away']) & (distance[8]['nothing'] | distance[8]['away']) & (distance[3]['nothing'] & distance[4]['nothing']), v_right['lostWall']))
+        rule_Wall.append(ctrl.Rule((distance[7]['ideal'] | distance[7]['away']) & (distance[8]['nothing'] | distance[8]['away']) & (distance[3]['nothing'] & distance[4]['nothing']), v_left['lostWall'])) 
+
         #DANGER 
         rule_Wall.append(ctrl.Rule(distance[7]['danger'] | distance[5]['danger'], v_right['foward']))
         rule_Wall.append(ctrl.Rule(distance[3]['danger'] | distance[4]['danger'] | distance[6]['danger'] , v_right['foward']))
 
-        rule_Wall.append(ctrl.Rule(distance[7]['danger'] | distance[5]['danger'], v_left['slowTurning']))
+        rule_Wall.append(ctrl.Rule(distance[7]['danger'] | distance[5]['danger'], v_left['turning']))
         rule_Wall.append(ctrl.Rule(distance[3]['danger'] | distance[4]['danger'] | distance[6]['danger'], v_left['reverse']))
 
         vel_ctrl = ctrl.ControlSystem(rule_Wall)
@@ -107,26 +113,29 @@ def robotStuck(robot):
 robot = Robot()
 a = wall_following()
 a.init_fuzzy()
-ultrassonic = robot.read_ultrassonic_sensors()[0:8]
-print("Ultrassonic: ", ultrassonic)
-print("vel: ", a.get_vel(ultrassonic))
+#ultrassonic = robot.read_ultrassonic_sensors()[0:8]
+#print("Ultrassonic: ", ultrassonic)
+#print("vel: ", a.get_vel(ultrassonic))
 oldPos = 0
 
 for x in range(5000):
-    ultrassonic = robot.read_ultrassonic_sensors()[0:8]
+    ultrassonicRaw = robot.read_ultrassonic_sensors()[0:11]
 
     pos = robot.get_current_position()
 
     if (oldPos == pos):
         robotStuck(robot)
     else:
+        ultrassonic = ultrassonicRaw[0:8]
+        ultrassonic.append(ultrassonicRaw[9])
         vel = a.get_vel(ultrassonic)
         #print("Ultrassonic: ", ultrassonic)
         print("Iteracao: ", x)
         print("Esquerda: " , ultrassonic[0:3])
         print("Frente: " , ultrassonic[3:5])
         print("Direita: " , ultrassonic[5:8])
-        print("vel: ", a.get_vel(ultrassonic))
+        print("Tras: ", ultrassonic[8])
+        print("vel: ", vel)
         robot.set_left_velocity(vel[0])  # rad/s
         robot.set_right_velocity(vel[1])
         time.sleep(0.2)
