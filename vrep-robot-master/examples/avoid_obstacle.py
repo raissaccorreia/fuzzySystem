@@ -1,6 +1,7 @@
 from skfuzzy import control as ctrl
 import skfuzzy as fuzz
 import numpy as np
+import math
 import time
 import sys
 sys.path.insert(0, '../src')
@@ -10,20 +11,44 @@ import matplotlib.pyplot as plt
 class avoid_obstacles():
     def __init__(self):
         self.NUM_SENSORS = 8
-        self.max_speed = 3
+        #self.NUM_SENSORS = 16
+        #alterado para a animação ficar mais dinamica
+        self.max_speed = 2*math.pi
         self.steps = 0.01
         self.fuzzy_system = []
 
-    def init_fuzzy(self):
+    def init_fuzzy(self, behavior):
         distance = []
         for i in range(0, self.NUM_SENSORS):
+            #mantido pois se trata apenas do universo de possibilidades de distancia de 0 a 5 de 0.01 em 0.01
             distance.append(ctrl.Antecedent(
                 np.arange(0, 5.0, self.steps), 's'+str(i)))
-            distance[i]['close'] = fuzz.trapmf(
-                distance[i].universe, [0.0, 0.0, 0.3, 0.6])
-            distance[i]['away'] = fuzz.trapmf(
-                distance[i].universe, [0.3, 0.6, 5.0, 5.0])
+            #fuzzy sets criados pelo ped
+            if(behavior == "normal"):
+                distance[i]['close'] = fuzz.trapmf(
+                    distance[i].universe, [0.0, 0.0, 0.3, 0.6])
+                distance[i]['away'] = fuzz.trapmf(
+                    distance[i].universe, [0.3, 0.6, 5.0, 5.0])
+            #comportamento mais previnido evitando mais
+            if(behavior == "previnido"):
+                distance[i]['close'] = fuzz.trapmf(
+                    distance[i].universe, [0.0, 0.0, 0.45, 0.9])
+                distance[i]['away'] = fuzz.trapmf(
+                    distance[i].universe, [0.45, 0.9, 5.0, 5.0])
+            #comportamento mais de mudanca em cima da hora
+            if(behavior == "mto agressivo"):
+                distance[i]['close'] = fuzz.trapmf(
+                    distance[i].universe, [0.0, 0.0, 0.1, 0.25])
+                distance[i]['away'] = fuzz.trapmf(
+                    distance[i].universe, [0.1, 0.25, 5.0, 5.0])
+            #comportamento mais de mudanca em cima da hora
+            if(behavior == "agressivo"):
+                distance[i]['close'] = fuzz.trapmf(
+                    distance[i].universe, [0.0, 0.0, 0.13, 0.3])
+                distance[i]['away'] = fuzz.trapmf(
+                    distance[i].universe, [0.15, 0.3, 5.0, 5.0])
 
+        #mantido pois se trata apenas do universo de possibilidades de velocidade
         v_left = ctrl.Consequent(
             np.arange(-self.max_speed, 1.0+self.max_speed, 0.01), 'vl')
         v_right = ctrl.Consequent(
@@ -44,6 +69,12 @@ class avoid_obstacles():
                             distance[6]['close'] | distance[7]['close'], v_left['negative'])
         rule_l3 = ctrl.Rule(distance[0]['away'] & distance[1]['away'] & distance[2]['away'] & distance[3]['away'] &
                             distance[4]['away'] & distance[5]['away'] & distance[6]['away'] & distance[7]['away'], v_left['positive'])
+        #rule_l4 = ctrl.Rule((distance[0]['close'] | distance[1]['close'] |
+        #                    distance[2]['close'] | distance[3]['close'] ) &
+        #                    (distance[4]['close'] | distance[5]['close'] |
+        #                    distance[6]['close'] | distance[7]['close']) & 
+        #                    (distance[8]['away'] | distance[9]['away'] | distance[10]['away'] | distance[11]['away'] |
+        #                    distance[12]['away'] | distance[13]['away'] | distance[14]['away'] | distance[15]['away']), v_left['negative'])
 
         rule_r1 = ctrl.Rule(distance[0]['close'] | distance[1]['close'] |
                             distance[2]['close'] | distance[3]['close'], v_right['negative'])
@@ -51,9 +82,17 @@ class avoid_obstacles():
                             distance[6]['close'] | distance[7]['close'], v_right['positive'])
         rule_r3 = ctrl.Rule(distance[0]['away'] & distance[1]['away'] & distance[2]['away'] & distance[3]['away'] &
                             distance[4]['away'] & distance[5]['away'] & distance[6]['away'] & distance[7]['away'], v_right['positive'])
+        #rule_r4 = ctrl.Rule((distance[0]['close'] | distance[1]['close'] |
+        #                    distance[2]['close'] | distance[3]['close'] ) &
+        #                    (distance[4]['close'] | distance[5]['close'] |
+        #                    distance[6]['close'] | distance[7]['close']) & 
+        #                    (distance[8]['away'] | distance[9]['away'] | distance[10]['away'] | distance[11]['away'] |
+        #                    distance[12]['away'] | distance[13]['away'] | distance[14]['away']| distance[15]['away']), v_right['negative'])
 
         vel_ctrl = ctrl.ControlSystem(
-            [rule_l1, rule_l2, rule_l3, rule_r1, rule_r2, rule_r3])
+            #[rule_l1, rule_l2, rule_l3, rule_l4, rule_r1, rule_r2, rule_r3, rule_r4]
+            [rule_l1, rule_l2, rule_l3, rule_r1, rule_r2, rule_r3]
+        )
         self.fuzzy_system = ctrl.ControlSystemSimulation(vel_ctrl)
 
     def get_vel(self, dist):
@@ -66,7 +105,11 @@ class avoid_obstacles():
 
 robot = Robot()
 Avoid = avoid_obstacles()
-Avoid.init_fuzzy()
+
+behavior_type = input()
+#normal, previnido, agressivo
+
+Avoid.init_fuzzy(behavior_type)
 data_position_x = []
 data_position_y = []
 how_long = int(input())
@@ -74,7 +117,8 @@ t_start = time.time()
 
 while(robot.get_connection_status() != -1):
     dist = robot.read_ultrassonic_sensors()
-    vel = Avoid.get_vel(dist[:8])  # Using only the 8 frontal sensors
+    vel = Avoid.get_vel(dist[:8]) # Using only the 8 frontal sensors
+    #vel = Avoid.get_vel(dist[:16])  
     position = robot.get_current_position()
     data_position_x.append(position[0])
     data_position_y.append(position[1])    
