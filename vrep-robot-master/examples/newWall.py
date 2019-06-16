@@ -146,7 +146,8 @@ a.init_fuzzy()
 #print("vel: ", a.get_vel(ultrassonic))
 #a.printMembership()
 
-for x in range(5000):
+#for x in range(5000):
+while(robot.get_connection_status() != -1):
     ultrassonicRaw = robot.read_ultrassonic_sensors()[0:11]
 
     pos = robot.get_current_position()
