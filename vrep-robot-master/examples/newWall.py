@@ -1,6 +1,7 @@
 import numpy as np
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
+import matplotlib.pyplot as plt
 
 import math
 import time
@@ -22,7 +23,7 @@ class wall_following():
             distance.append(ctrl.Antecedent(np.arange(0, 5.0, self.steps), 's' + str(i)))
 
             distance[i]['danger']   = fuzz.trimf(distance[i].universe, [0.0, 0.0, 0.15])
-            distance[i]['close']    = fuzz.trapmf(distance[i].universe, [0.0, 0.0, 0.25, 0.3])
+            distance[i]['close']    = fuzz.trapmf(distance[i].universe, [0.0, 0.1, 0.15, 0.2])
             distance[i]['ideal']    = fuzz.trapmf(distance[i].universe, [0.15, 0.2, 0.3, 0.5])
             distance[i]['away']     = fuzz.trapmf(distance[i].universe, [0.3, 0.5, 0.6, 0.7])
             distance[i]['nothing']  = fuzz.trapmf(distance[i].universe, [0.6, 0.7, 5.0, 5.0])
@@ -30,16 +31,16 @@ class wall_following():
         v_left  = ctrl.Consequent(np.arange(-self.max_speed, 1.0 + self.max_speed, 0.01), 'vl')
         v_right = ctrl.Consequent(np.arange(-self.max_speed, 1.0 + self.max_speed, 0.01), 'vr')
 
-        v_right['fast']         = fuzz.trimf(v_left.universe, [0.3, self.max_speed + 0.3, self.max_speed + 0.3])
+        #v_right['fast']         = fuzz.trimf(v_left.universe, [0.3, self.max_speed + 0.3, self.max_speed + 0.3])
         v_right['foward']       = fuzz.trimf(v_left.universe, [0.0, self.max_speed, self.max_speed])
-        v_right['slowTurning']  = fuzz.trimf(v_left.universe, [0.0, self.max_speed - 0.1, self.max_speed - 0.1])
+        #v_right['slowTurning']  = fuzz.trimf(v_left.universe, [0.0, self.max_speed - 0.1, self.max_speed - 0.1])
         v_right['turning']      = fuzz.trimf(v_left.universe, [0.0, self.max_speed - 0.5, self.max_speed - 0.5])
         v_right['reverse']      = fuzz.trimf(v_right.universe, [-self.max_speed + 0.1, -self.max_speed + 0.1, 0.0])
         v_right['lostWall']     = fuzz.trimf(v_left.universe, [-self.max_speed - 0.2, -self.max_speed - 0.2 , 0.0])
 
-        v_left['fast']          = fuzz.trimf(v_right.universe, [0.3, self.max_speed + 0.3, self.max_speed + 0.3])
+        #v_left['fast']          = fuzz.trimf(v_right.universe, [0.3, self.max_speed + 0.3, self.max_speed + 0.3])
         v_left['foward']        = fuzz.trimf(v_right.universe, [0.0, self.max_speed, self.max_speed])
-        v_left['slowTurning']   = fuzz.trimf(v_right.universe, [0.0, self.max_speed - 0.1, self.max_speed - 0.1])
+        #v_left['slowTurning']   = fuzz.trimf(v_right.universe, [0.0, self.max_speed - 0.1, self.max_speed - 0.1])
         v_left['turning']       = fuzz.trimf(v_right.universe, [0.0, self.max_speed - 0.5, self.max_speed - 0.5])
         v_left['reverse']       = fuzz.trimf(v_right.universe, [-self.max_speed + 0.1, -self.max_speed + 0.1, 0.0])
         v_left['lostWall']      = fuzz.trimf(v_right.universe, [0.3, self.max_speed + 0.3, self.max_speed + 0.3])
@@ -60,7 +61,7 @@ class wall_following():
 
         #SEGUIR PAREDE
         #DIREITA
-        rule_Wall.append(ctrl.Rule(distance[7]['ideal'] , v_right['slowTurning']))
+        rule_Wall.append(ctrl.Rule(distance[7]['ideal'] , v_right['turning']))
         rule_Wall.append(ctrl.Rule(distance[7]['close'] , v_right['foward']))
 
         #ESQUERDA
@@ -93,7 +94,11 @@ class wall_following():
 
         vel_ctrl = ctrl.ControlSystem(rule_Wall)
         self.fuzzy_system = ctrl.ControlSystemSimulation(vel_ctrl)
-        print(" System Init")
+        #v_left.view()
+        #v_right.view()
+        #rule_Wall[0].view()
+        #plt.show()
+
 
     def get_vel(self, dist):
         for i in range(len(dist)):
@@ -103,41 +108,59 @@ class wall_following():
         return [self.fuzzy_system.output['vl'], self.fuzzy_system.output['vr']]
 
 
+    def printMembership(self):
+        distance = np.arange(-0.1, 1, self.steps)
 
-def robotStuck(robot):
-    for i in range(5):
-        robot.set_left_velocity(-2)
-        robot.set_right_velocity(-2)
-        time.sleep(0.2)
+        danger   = fuzz.trimf(distance, [0.0, 0.0, 0.15])
+        close    = fuzz.trapmf(distance, [0.0, 0.1, 0.15, 0.2])
+        ideal    = fuzz.trapmf(distance, [0.15, 0.2, 0.3, 0.5])
+        away     = fuzz.trapmf(distance, [0.3, 0.5, 0.6, 0.7])
+        nothing  = fuzz.trapmf(distance, [0.6, 0.7, 1.0, 1.0])
+
+        fig, (ax0) = plt.subplots(nrows = 1, figsize= (8,9))
+
+        ax0.plot(distance, danger, 'r', lineWidth = 1.5, label = 'Danger')
+        ax0.plot(distance, close, 'y', lineWidth = 1.5, label = 'Close')
+        ax0.plot(distance, ideal, 'g', lineWidth = 1.5, label = 'Ideal')
+        ax0.plot(distance, away, 'b', lineWidth = 1.5, label = 'Away')
+        ax0.plot(distance, nothing, 'c', lineWidth = 1.5, label = 'Nothing')
+        ax0.set_title('Distance from robot')
+        ax0.legend()
+
+        ax0.spines['top'].set_visible(False)
+        ax0.spines['right'].set_visible(False)
+        ax0.get_xaxis().tick_bottom()
+        ax0.get_yaxis().tick_left()
+
+        #plt.tight_layout()
+        #plt.show()
+
+
 
 robot = Robot()
+plt.ion()
 a = wall_following()
 a.init_fuzzy()
 #ultrassonic = robot.read_ultrassonic_sensors()[0:8]
 #print("Ultrassonic: ", ultrassonic)
 #print("vel: ", a.get_vel(ultrassonic))
-oldPos = 0
+#a.printMembership()
 
 for x in range(5000):
     ultrassonicRaw = robot.read_ultrassonic_sensors()[0:11]
 
     pos = robot.get_current_position()
 
-    if (oldPos == pos):
-        robotStuck(robot)
-    else:
-        ultrassonic = ultrassonicRaw[0:8]
-        ultrassonic.append(ultrassonicRaw[9])
-        vel = a.get_vel(ultrassonic)
-        #print("Ultrassonic: ", ultrassonic)
-        print("Iteracao: ", x)
-        print("Esquerda: " , ultrassonic[0:3])
-        print("Frente: " , ultrassonic[3:5])
-        print("Direita: " , ultrassonic[5:8])
-        print("Tras: ", ultrassonic[8])
-        print("vel: ", vel)
-        robot.set_left_velocity(vel[0])  # rad/s
-        robot.set_right_velocity(vel[1])
-        time.sleep(0.2)
-
-    oldPos = pos
+    ultrassonic = ultrassonicRaw[0:8]
+    ultrassonic.append(ultrassonicRaw[9])
+    vel = a.get_vel(ultrassonic)
+    #print("Ultrassonic: ", ultrassonic)
+    #print("Iteracao: ", x)
+    #print("Esquerda: " , ultrassonic[0:3])
+    #print("Frente: " , ultrassonic[3:5])
+    #print("Direita: " , ultrassonic[5:8])
+    #print("Tras: ", ultrassonic[8])
+    #print("vel: ", vel)
+    robot.set_left_velocity(vel[0])  # rad/s
+    robot.set_right_velocity(vel[1])
+    time.sleep(0.2)
