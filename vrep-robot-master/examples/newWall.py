@@ -31,33 +31,32 @@ class wall_following():
         v_left  = ctrl.Consequent(np.arange(-self.max_speed, 1.0 + self.max_speed, 0.01), 'vl')
         v_right = ctrl.Consequent(np.arange(-self.max_speed, 1.0 + self.max_speed, 0.01), 'vr')
 
-        #v_right['fast']         = fuzz.trimf(v_left.universe, [0.3, self.max_speed + 0.3, self.max_speed + 0.3])
+        #RODA ESQUERDA
         v_right['foward']       = fuzz.trimf(v_left.universe, [0.0, self.max_speed, self.max_speed])
-        #v_right['slowTurning']  = fuzz.trimf(v_left.universe, [0.0, self.max_speed - 0.1, self.max_speed - 0.1])
         v_right['turning']      = fuzz.trimf(v_left.universe, [0.0, self.max_speed - 0.5, self.max_speed - 0.5])
         v_right['reverse']      = fuzz.trimf(v_right.universe, [-self.max_speed + 0.1, -self.max_speed + 0.1, 0.0])
         v_right['lostWall']     = fuzz.trimf(v_left.universe, [-self.max_speed - 0.2, -self.max_speed - 0.2 , 0.0])
-
-        #v_left['fast']          = fuzz.trimf(v_right.universe, [0.3, self.max_speed + 0.3, self.max_speed + 0.3])
+        
+        #RODA DIREITA
         v_left['foward']        = fuzz.trimf(v_right.universe, [0.0, self.max_speed, self.max_speed])
-        #v_left['slowTurning']   = fuzz.trimf(v_right.universe, [0.0, self.max_speed - 0.1, self.max_speed - 0.1])
         v_left['turning']       = fuzz.trimf(v_right.universe, [0.0, self.max_speed - 0.5, self.max_speed - 0.5])
         v_left['reverse']       = fuzz.trimf(v_right.universe, [-self.max_speed + 0.1, -self.max_speed + 0.1, 0.0])
         v_left['lostWall']      = fuzz.trimf(v_right.universe, [0.3, self.max_speed + 0.3, self.max_speed + 0.3])
 
         rule_Wall = []
         #PROCURAR PAREDE
+        #DIREITA
+        rule_Wall.append(ctrl.Rule(distance[0]['nothing'] & distance[1]['nothing'] & distance[2]['nothing'] & distance[3]['nothing'] & distance[4]['nothing'] & distance[5]['nothing'] & distance[6]['nothing'] & distance[7]['nothing'], v_right['turning']))
+        rule_Wall.append(ctrl.Rule(distance[3]['nothing']| distance[3]['away'] | distance[4]['nothing'] | distance[4]['nothing'], v_right['foward']))
+        rule_Wall.append(ctrl.Rule(distance[3]['close'] | distance[4]['close'] & distance[7]['close'], v_right['foward']))
+        rule_Wall.append(ctrl.Rule(distance[3]['ideal'] | distance[4]['ideal'] & distance[7]['close'], v_right['foward']))
+
         #ESQUERDA
         rule_Wall.append(ctrl.Rule(distance[0]['nothing'] & distance[1]['nothing'] & distance[2]['nothing'] & distance[3]['nothing'] & distance[4]['nothing'] & distance[5]['nothing'] & distance[6]['nothing'] & distance[7]['nothing'], v_left['foward']))
         rule_Wall.append(ctrl.Rule(distance[3]['nothing']| distance[3]['away'] | distance[4]['nothing'] | distance[4]['nothing'], v_left['foward']))
         rule_Wall.append(ctrl.Rule(distance[3]['close'] | distance[4]['close'] & distance[7]['close'], v_left['reverse']))
         rule_Wall.append(ctrl.Rule(distance[3]['ideal'] | distance[4]['ideal'] & distance[7]['close'], v_left['reverse']))
         
-        #DIREITA
-        rule_Wall.append(ctrl.Rule(distance[0]['nothing'] & distance[1]['nothing'] & distance[2]['nothing'] & distance[3]['nothing'] & distance[4]['nothing'] & distance[5]['nothing'] & distance[6]['nothing'] & distance[7]['nothing'], v_right['turning']))
-        rule_Wall.append(ctrl.Rule(distance[3]['nothing']| distance[3]['away'] | distance[4]['nothing'] | distance[4]['nothing'], v_right['foward']))
-        rule_Wall.append(ctrl.Rule(distance[3]['close'] | distance[4]['close'] & distance[7]['close'], v_right['foward']))
-        rule_Wall.append(ctrl.Rule(distance[3]['ideal'] | distance[4]['ideal'] & distance[7]['close'], v_right['foward']))
 
         #SEGUIR PAREDE
         #DIREITA
@@ -69,35 +68,34 @@ class wall_following():
         rule_Wall.append(ctrl.Rule(distance[7]['close'] , v_left['turning']))
 
         #QUINA
+        #DIREITA
         rule_Wall.append(ctrl.Rule(distance[3]['ideal'] | distance[4]['ideal'] & (distance[7]['ideal'] | distance[7]['close']) , v_right['foward']))
         rule_Wall.append(ctrl.Rule(distance[3]['close'] | distance[4]['close'] & (distance[7]['ideal'] | distance[7]['close']) , v_right['foward']))
 
+        #ESQUERDA
         rule_Wall.append(ctrl.Rule(distance[3]['ideal'] | distance[4]['ideal'] & (distance[7]['ideal'] | distance[7]['close']), v_left['reverse']))
         rule_Wall.append(ctrl.Rule(distance[3]['close'] | distance[4]['close'] & (distance[7]['ideal'] | distance[7]['close']) , v_left['reverse']))
 
         #PERDEU PAREDE
-        #rule_Wall.append(ctrl.Rule(distance[7]['ideal'] | distance[7]['close'] | distance[7]['danger'] & (distance[6]['ideal'] | distance[6]['away'] | distance[6]['nothing']), v_right['turning']))
-        #rule_Wall.append(ctrl.Rule(distance[7]['ideal'] | distance[7]['close'] | distance[7]['danger'] & (distance[6]['away'] | distance[6]['nothing']), v_left['fast']))
-        
+        #DIREITA   
         rule_Wall.append(ctrl.Rule((distance[7]['nothing'] | distance[7]['away']) & (distance[8]['close'] | distance[8]['ideal'] | distance[8]['away']), v_right['lostWall']))
-        rule_Wall.append(ctrl.Rule((distance[7]['nothing'] | distance[7]['away']) & (distance[8]['close'] | distance[8]['ideal'] | distance[8]['away']), v_left['lostWall']))
-
         rule_Wall.append(ctrl.Rule((distance[7]['ideal'] | distance[7]['away']) & (distance[8]['nothing'] | distance[8]['away']) & (distance[3]['nothing'] & distance[4]['nothing']), v_right['lostWall']))
+
+        #ESQUERDA
+        rule_Wall.append(ctrl.Rule((distance[7]['nothing'] | distance[7]['away']) & (distance[8]['close'] | distance[8]['ideal'] | distance[8]['away']), v_left['lostWall']))
         rule_Wall.append(ctrl.Rule((distance[7]['ideal'] | distance[7]['away']) & (distance[8]['nothing'] | distance[8]['away']) & (distance[3]['nothing'] & distance[4]['nothing']), v_left['lostWall'])) 
 
         #DANGER 
+        #DIREITA
         rule_Wall.append(ctrl.Rule(distance[7]['danger'] | distance[5]['danger'], v_right['foward']))
         rule_Wall.append(ctrl.Rule(distance[3]['danger'] | distance[4]['danger'] | distance[6]['danger'] , v_right['foward']))
 
+        #ESQUERDA
         rule_Wall.append(ctrl.Rule(distance[7]['danger'] | distance[5]['danger'], v_left['turning']))
         rule_Wall.append(ctrl.Rule(distance[3]['danger'] | distance[4]['danger'] | distance[6]['danger'], v_left['reverse']))
 
         vel_ctrl = ctrl.ControlSystem(rule_Wall)
         self.fuzzy_system = ctrl.ControlSystemSimulation(vel_ctrl)
-        #v_left.view()
-        #v_right.view()
-        #rule_Wall[0].view()
-        #plt.show()
 
 
     def get_vel(self, dist):
@@ -132,8 +130,8 @@ class wall_following():
         ax0.get_xaxis().tick_bottom()
         ax0.get_yaxis().tick_left()
 
-        #plt.tight_layout()
-        #plt.show()
+        plt.tight_layout()
+        plt.show()
 
 
 
@@ -141,12 +139,7 @@ robot = Robot()
 plt.ion()
 a = wall_following()
 a.init_fuzzy()
-#ultrassonic = robot.read_ultrassonic_sensors()[0:8]
-#print("Ultrassonic: ", ultrassonic)
-#print("vel: ", a.get_vel(ultrassonic))
-#a.printMembership()
 
-#for x in range(5000):
 while(robot.get_connection_status() != -1):
     ultrassonicRaw = robot.read_ultrassonic_sensors()[0:11]
 
